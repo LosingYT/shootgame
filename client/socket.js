@@ -25,6 +25,10 @@ socket.on("error_message", (msg) => {
   alert(msg);
 });
 
+socket.on("bullet_fired", (bullet) => {
+  bullets.push(bullet);
+});
+
 function criarSala() {
     console.log('solicitando para criar sala...');
   socket.emit("create_room");
