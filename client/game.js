@@ -18,6 +18,18 @@ const GRAVITY = 0.5;
 const JUMP_FORCE = -10;  
 const GROUND_Y = 350;
 
+const statusDiv = document.createElement("div");
+statusDiv.style.position = "absolute";
+statusDiv.style.top = "5px";
+statusDiv.style.left = "5px";
+statusDiv.style.color = "white";
+statusDiv.style.font = "16px Arial";
+statusDiv.style.background = "rgba(0,0,0,0.5)";
+statusDiv.style.padding = "5px";
+statusDiv.style.whiteSpace = "pre";
+statusDiv.style.zIndex = "10";
+document.body.appendChild(statusDiv);
+
 let groundTexture = null;
 const groundImage = new Image();
 groundImage.src = "https://tse4.mm.bing.net/th/id/OIP.vRr8ScD3Zay6XUF9fVafLwHaHa?rs=1&pid=ImgDetMain&o=7&rm=3";
@@ -29,7 +41,8 @@ const playerSprite = new Image();
 playerSprite.src = "https://pixelartmaker-data-78746291193.nyc3.digitaloceanspaces.com/image/19470f3427cb196.png";
 
 window.updatePlayers = (data) => {
-  players = data;
+    players = data;
+    updateStatus();
 };
 
 window.startGame = () => {
@@ -40,37 +53,37 @@ document.addEventListener("keydown", (e) => (keys[e.key] = true));
 document.addEventListener("keyup", (e) => (keys[e.key] = false));
 
 function update() {
-    if (keys["ArrowLeft"]) {
-        myX -= 3;
-        facing = "left";
-    }
-    if (keys["ArrowRight"]) {
-        myX += 3;
-        facing = "right";
-    }
-    if (keys["ArrowUp"] && onGround) {
-        myVelY = JUMP_FORCE;
-        onGround = false;
-    }
-
-    if (keys["x"] || keys["X"]) {
-        shootBullet();
-        keys["x"] = false;
-        keys["X"] = false;
-    }
+    if (keys["ArrowLeft"]) { myX -= 3; facing = "left"; }
+    if (keys["ArrowRight"]) { myX += 3; facing = "right"; }
+    if (keys["ArrowUp"] && onGround) { myVelY = JUMP_FORCE; onGround = false; }
+    if (keys["x"] || keys["X"]) { shootBullet(); keys["x"] = keys["X"] = false; }
 
     myVelY += GRAVITY;
     myY += myVelY;
-
-    if (myY + 30 >= GROUND_Y) {
-        myY = GROUND_Y - 30;
-        myVelY = 0;
-        onGround = true;
-    }
+    if (myY + 30 >= GROUND_Y) { myY = GROUND_Y - 30; myVelY = 0; onGround = true; }
 
     for (let i = bullets.length - 1; i >= 0; i--) {
-        bullets[i].x += bullets[i].dir === "right" ? BULLET_SPEED : -BULLET_SPEED;
-        if (bullets[i].x < 0 || bullets[i].x > canvas.width) bullets.splice(i, 1);
+        const b = bullets[i];
+        b.x += b.dir === "right" ? BULLET_SPEED : -BULLET_SPEED;
+
+        // Remove bala se saiu da tela
+        if (b.x < 0 || b.x > canvas.width || b.y < 0 || b.y > canvas.height) {
+            bullets.splice(i, 1);
+            continue;
+        }
+
+        // Verifica colisões com jogadores
+        for (const [id, p] of Object.entries(players)) {
+            if (!p.alive) continue;
+            if (id === b.shooter) continue; // não atinge quem atirou
+            if (b.x > p.x && b.x < p.x + 30 && b.y > p.y && b.y < p.y + 30) {
+                // Se acertou, diminui HP e remove a bala
+                p.hp -= 10;
+                if (p.hp <= 0) p.alive = false;
+                bullets.splice(i, 1);
+                break;
+            }
+        }
     }
 
 
@@ -80,13 +93,16 @@ function update() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // Desenha o chão
     ctx.fillStyle = groundTexture || "#444";
     ctx.fillRect(0, GROUND_Y, canvas.width, 50);
-  
+
+    // Desenha os jogadores
     for (const [id, p] of Object.entries(players)) {
         const isMe = id === socket.id;
         const direction = isMe ? facing : "left";
 
+        // Desenha o sprite do jogador
         if (playerSprite.complete && playerSprite.naturalWidth > 0) {
             ctx.save();
             ctx.translate(p.x + 16, p.y + 16); 
@@ -97,33 +113,38 @@ function draw() {
             ctx.fillStyle = isMe ? "lime" : "red";
             ctx.fillRect(p.x, p.y, 30, 30);
         }
-    }
-
-    if (Object.keys(players).length === 0) {
-        ctx.save();
-        ctx.translate(myX + 16, myY + 16);
-        if (facing === "right") ctx.scale(-1, 1);
-        if (playerSprite.complete && playerSprite.naturalWidth > 0) {
-            ctx.drawImage(playerSprite, -16, -16, 32, 32);
-        } else {
-            ctx.fillStyle = "lime";
-            ctx.fillRect(-15, -15, 30, 30);
+        
+        // Desenha a vida do jogador no topo da tela
+        if (p.alive) {
+            ctx.fillStyle = "white";
+            ctx.fillText(`${id === socket.id ? "Você" : id}: ${p.hp} HP`, p.x, p.y - 10);
         }
-        ctx.restore();
     }
 
+    // Desenha as balas
     ctx.fillStyle = "yellow";
     for (const b of bullets) {
-        ctx.fillRect(b.x - 4, b.y - 2, 8, 4); // retângulo simples como bala
+        ctx.fillRect(b.x - 4, b.y - 2, 8, 4);
     }
 }
 
 function shootBullet() {
-    bullets.push({
-        x: myX + 16, 
+    const bullet = {
+        x: myX + 16,
         y: myY + 16,
-        dir: facing
-    });
+        dir: facing,
+        shooter: socket.id
+    };
+    socket.emit("shoot_bullet", bullet);
+}
+
+function updateStatus() {
+    let text = "";
+    for (const [id, p] of Object.entries(players)) {
+        if (!p.alive) continue; 
+        text += `${id === socket.id ? "Você" : id}: ${p.hp} HP\n`;
+    }
+    statusDiv.innerText = text;
 }
   
 
