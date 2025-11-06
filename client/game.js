@@ -40,6 +40,9 @@ groundImage.onload = () => {
 const playerSprite = new Image();
 playerSprite.src = "https://pixelartmaker-data-78746291193.nyc3.digitaloceanspaces.com/image/19470f3427cb196.png";
 
+const playerGhost = new Image();
+playerGhost.src = "https://i.redd.it/extremely-new-to-pixel-art-and-made-a-ghost-d-v0-kmanq333vfja1.png?s=aaf9123a35ee571227f669c501ffb439ea721d9d";
+
 window.updatePlayers = (data) => {
     players = data;
     updateStatus();
@@ -56,7 +59,7 @@ function update() {
     if (keys["ArrowLeft"]) { myX -= 3; facing = "left"; }
     if (keys["ArrowRight"]) { myX += 3; facing = "right"; }
     if (keys["ArrowUp"] && onGround) { myVelY = JUMP_FORCE; onGround = false; }
-    if (keys["x"] || keys["X"]) { shootBullet(); keys["x"] = keys["X"] = false; }
+    if ((keys["x"] || keys["X"]) && players[socket.id] && players[socket.id].alive) { shootBullet(); keys["x"] = keys["X"] = false; }
 
     myVelY += GRAVITY;
     myY += myVelY;
@@ -107,7 +110,11 @@ function draw() {
             ctx.save();
             ctx.translate(p.x + 16, p.y + 16); 
             if (direction === "right") ctx.scale(-1, 1); 
-            ctx.drawImage(playerSprite, -16, -16, 32, 32);
+            if (!p.alive){
+                ctx.drawImage(playerGhost, -16, -16, 32, 32); 
+            } else {
+                ctx.drawImage(playerSprite, -16, -16, 32, 32);
+            }
             ctx.restore();
         } else {
             ctx.fillStyle = isMe ? "lime" : "red";
