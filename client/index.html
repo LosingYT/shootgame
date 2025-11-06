@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Plataforma Multiplayer</title>
+  <style>
+    body { margin: 0; background: #1e1e1e; color: white; text-align: center; }
+    canvas { background: #333; display: block; margin: 20px auto; }
+  </style>
+</head>
+<body>
+  <h1>Jogo Plataforma Multiplayer</h1>
+  <button onclick="criarSala()">Criar Sala</button>
+  <input id="roomId" placeholder="ID da sala">
+  <button onclick="entrarSala()">Entrar</button>
+  <button onclick="iniciar()">Iniciar Jogo</button>
+  <p id="status"></p>
+  <p id="playerCount"></p>
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script src="socket.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
