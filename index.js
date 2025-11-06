@@ -95,7 +95,6 @@ io.on("connection", (socket) => {
 
   socket.on("shoot_bullet", (bullet) => {
     const roomId = socket.roomId;
-    console.log("room: " + roomId)
     if (!roomId) return;
 
     const room = rooms[roomId];
